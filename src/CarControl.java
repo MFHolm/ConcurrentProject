@@ -61,7 +61,7 @@ class Car extends Thread {
         startpos = cd.getStartPos(no);
         barpos = cd.getBarrierPos(no);  // For later use
 
-        col = chooseColor();
+        col = chooseColor(no);
 
         // do not change the special settings for car no. 0
         if (no==0) {
@@ -98,7 +98,12 @@ class Car extends Thread {
         return speed * (cd.isSlow(curpos)? slowfactor : 1);
     }
 
-    Color chooseColor() { 
+    Color chooseColor(int no) {
+    	if(no <= 4 && no != 0){
+    		return Color.red;
+    	} else if (no >= 4 && no != 0){
+    		return Color.cyan;
+    	}
         return Color.blue; // You can get any color, as longs as it's blue 
     }
 
@@ -147,6 +152,8 @@ class Car extends Thread {
 
 }
 
+
+
 public class CarControl implements CarControlI{
 
     CarDisplayI cd;           // Reference to GUI
@@ -157,6 +164,7 @@ public class CarControl implements CarControlI{
         this.cd = cd;
         car  = new  Car[9];
         gate = new Gate[9];
+        
 
         for (int no = 0; no < 9; no++) {
             gate[no] = new Gate();
