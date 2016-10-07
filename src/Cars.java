@@ -104,6 +104,7 @@ class Tile extends JPanel {
         users++;
         if (users > 1 && keepcrash && !hadcrash) {
         	hadcrash = true;
+        	System.out.println("crash");
             // Define a staint
             int dia = 7;
             staintx = (edge-1-dia)/2 +(int)Math.round(Math.random()*4) - 2;
@@ -580,13 +581,9 @@ class ControlPanel extends JPanel {
                 cars.showBridge(bridge_on.isSelected());
             }
         });
-
-
-
        for (int i = 0; i < 6; i++) 
             bridge_limit.addItem(""+(i+1));
         bridge_limit.setSelectedIndex(currentLimit-1);
-
         bridge_limit.addActionListener( new ActionListener () {
             public void actionPerformed(ActionEvent e) {
                 int i = bridge_limit.getSelectedIndex();
@@ -660,13 +657,11 @@ class ControlPanel extends JPanel {
    public void disableLimit() {
        // bridge_limit.setEnabled(false);
    }
-
     public void enableLimit(int k) {
         currentLimit = k;
         if (k - 1 != bridge_limit.getSelectedIndex()) bridge_limit.setSelectedIndex(k - 1 );
         // bridge_limit.setEnabled(true);
     }
-
     public void setBridge(boolean active) {
     	// Precaution to avoid infinite event seqeunce of events
     	if (active != bridge_on.isSelected()) {
@@ -769,12 +764,9 @@ public class Cars extends JFrame implements CarDisplayI {
      
     class SetLimitThread extends Thread {
         int newmax;
-
         public SetLimitThread(int newmax) {
             this.newmax =  newmax;
-
         }
-
         public void run() {
             // ctr.setLimit(newmax);
             
@@ -797,10 +789,8 @@ public class Cars extends JFrame implements CarDisplayI {
     
     // Thread to carry out barrier off shut down since
     // it may be blocked by CarControl
-
     class ShutDownThread extends Thread {
         int newmax;
-
         public void run() {
             try {
 				ctr.barrierShutDown();
@@ -906,13 +896,11 @@ public class Cars extends JFrame implements CarDisplayI {
     
 /*
     void barrierShutDown(Semaphore done) {
-
         if (shutDownThread != null ) {
             println("WARNING: Barrier shut down already in progress");
             if (done != null) done.V();
             return;
         }
-
         gnd.showBarrier(2);
         cp.shutDownBegin();
         // Hold values for post-processing
@@ -923,14 +911,12 @@ public class Cars extends JFrame implements CarDisplayI {
     
     // Called when Shut Down Thread has ended
     void shutDownDone() {
-
         // System.out.println(" start");
     	        cp.shutDownEnd();
  
         if (shutDownSem != null ) shutDownSem.V();
         shutDownThread = null;
         shutDownSem = null;
-
         gnd.showBarrier(0);
         barrieractive = false;
        // System.out.println("endSyncOff end");
@@ -1059,7 +1045,6 @@ public class Cars extends JFrame implements CarDisplayI {
 
 /*
     void setLimit(int max) {
-
         if (! bridgepresent) {
             println("ERROR: No bridge at this playground!");
             return;
@@ -1069,7 +1054,6 @@ public class Cars extends JFrame implements CarDisplayI {
             println("ERROR: Illegal limit value");
             return;
         }
-
         cp.disableLimit();
         ctr.setLimit(max);
         gnd.setLimit(max);
@@ -1081,7 +1065,6 @@ public class Cars extends JFrame implements CarDisplayI {
  *  No blocking of setLimit in this version
  *     
     void setLimit(int max, Semaphore done) {
-
         if (! bridgepresent) {
             println("ERROR: No bridge at this playground!");
             if (done != null) done.V();
@@ -1093,13 +1076,11 @@ public class Cars extends JFrame implements CarDisplayI {
             if (done != null) done.V();
             return;
         }
-
         if (limitThread != null ) {
             println("WARNING: Limit setting already in progress");
             if (done != null) done.V();
             return;
         }
-
         cp.disableLimit();
         // Hold values for post-processing
         limitValue = max;
@@ -1110,7 +1091,6 @@ public class Cars extends JFrame implements CarDisplayI {
     
     // Called when SetLimitThread has ended
     void endSetLimit() {
-
         System.out.println("endSetLimit start");
         if (limitDone != null ) limitDone.V();
         
@@ -1254,7 +1234,6 @@ class CarTestWrapper implements CarTestingI {
         try {
             done.P();
         } catch (InterruptedException e) {}
-
     }
 */  
     
@@ -1334,7 +1313,6 @@ class CarTestWrapper implements CarTestingI {
         try {
             done.P();
         } catch (InterruptedException e) {}
-
     }
 */    
     
@@ -1468,16 +1446,3 @@ class Layout {
 	}	
 	
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
