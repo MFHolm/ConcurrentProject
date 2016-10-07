@@ -104,6 +104,7 @@ class Tile extends JPanel {
         users++;
         if (users > 1 && keepcrash && !hadcrash) {
         	hadcrash = true;
+        	System.out.println("crash");
             // Define a staint
             int dia = 7;
             staintx = (edge-1-dia)/2 +(int)Math.round(Math.random()*4) - 2;
