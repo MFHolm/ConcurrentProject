@@ -39,8 +39,8 @@ class Gate {
 
 class Car extends Thread {
 
-    int basespeed = 250;             // Rather: degree of slowness
-    int variation =  0;             // Percentage of base speed
+    int basespeed = 100;             // Rather: degree of slowness
+    int variation = 50;             // Percentage of base speed
 
     CarDisplayI cd;                  // GUI part
 
@@ -58,7 +58,7 @@ class Car extends Thread {
     
 
     Pos[][] positions;				//Keeps track of positions of other cars.
-    Semaphore mutexDrive;			//Semaphore for mutual exclusion when driving.
+    Semaphore mutexPositions;			//Semaphore for mutual exclusion when driving.
     Alley alley;					//Contains semaphores and other information for the alley.
     
     public Car(int no, CarDisplayI cd, Gate g, Pos[][] positions, Semaphore mutexDrive, Alley alley) {
@@ -80,7 +80,7 @@ class Car extends Thread {
         }
         positions[no][0] = startpos;
         positions[no][1] = startpos;
-        this.mutexDrive = mutexDrive;
+        this.mutexPositions = mutexDrive;
        
     }
 
@@ -141,29 +141,9 @@ class Car extends Thread {
                 	
                 newpos = nextPos(curpos);
                 
-                //If the car is about to enter the critical section
-                System.out.println(this.alley);
-                if (no < 5 && no !=0 && (curpos.row == 2 || curpos.row == 1) && curpos.col == 3) {
-                	//CCW
-                	alley.alleyMutexCCW.P();
-                	alley.enter(no);
-                	if(alley.ccwCounter == 1) {
-                		alley.mutexAlley.P();
-                	}
-                	alley.alleyMutexCCW.V();
-                }
-                else if (no >4 && curpos.row == 10 && curpos.col == 3) {
-                	//CW
-                	alley.alleyMutexCW.P();
-                	alley.enter(no);
-                	if(alley.cwCounter == 1) {
-                		alley.mutexAlley.P();
-                	}
-                	alley.alleyMutexCW.V();
-                }
-                
+              
                 //Start of critical section
-                mutexDrive.P();
+                mutexPositions.P();
                 
                 //Check if there is a car at nextpos
                 boolean occupied = false;
@@ -180,23 +160,66 @@ class Car extends Thread {
                 }
                 else {
                 	//If tile is occupied just continue in the while loop
-                	mutexDrive.V();
+                	mutexPositions.V();
                 	continue;
                 }
+                               
                 //End of critical section
-                mutexDrive.V();
+                mutexPositions.V();
+                
+                //If the car is about to enter the critical section
+                System.out.println(this.alley);
+                if (no < 5 && no !=0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
+                	mutexPositions.P();
+                	 positions[no][1] = curpos;
+                	mutexPositions.V();
+                	//CCW
+                	alley.alleyMutexCCW.P();
+                	if(alley.ccwCounter == 0) {
+                		alley.mutexAlley.P();
+                	}
+                	alley.enter(no);
+                	alley.alleyMutexCCW.V();
+                	
+                	mutexPositions.P();
+                 	 positions[no][1] = newpos;
+                 	mutexPositions.V();
+                }
+                else if (no > 4 && curpos.row == 10 && curpos.col == 0) {
+                mutexPositions.P();
+               	 positions[no][1] = curpos;
+               	mutexPositions.V();
+                	//CW
+                	alley.alleyMutexCW.P();
+                	if(alley.cwCounter == 0) {
+                		alley.mutexAlley.P();
+                	}
+                	alley.enter(no); 
+                	alley.alleyMutexCW.V();
+                	
+                	mutexPositions.P();
+                  	 positions[no][1] = newpos;
+                  	mutexPositions.V();
+                }
+                
+                
                 
                 //  Move to new position 
 	            cd.clear(curpos);
 	            cd.mark(curpos,newpos,col,no);
 	            sleep(speed());
+	            
+	            mutexPositions.P();
+              	 positions[no][0] = newpos;
+              	mutexPositions.V();
+	            
 	            cd.clear(curpos,newpos);
 	            cd.mark(newpos,col,no);
 	
 	            curpos = newpos;
 	               
               //If the car has left the critical section
-                if (no < 5 && no !=0 && curpos.row == 9 && curpos.col == 1) {
+                if (no < 5 && no !=0 && newpos.row == 9 && newpos.col == 1) {
                 	alley.alleyMutexCCW.P();
                 	alley.leave(no);
                 	if(alley.ccwCounter == 0) {
@@ -204,7 +227,7 @@ class Car extends Thread {
                 	}
                 	alley.alleyMutexCCW.V();
                 }
-                else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
+                else if (no > 4 && newpos.row == 0 && newpos.col == 2) {
                 	alley.alleyMutexCW.P();
                 	alley.leave(no);
                 	System.out.println("no: " + no + " cwCounter: " + alley.cwCounter);
