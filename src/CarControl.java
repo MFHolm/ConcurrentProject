@@ -149,14 +149,10 @@ class Car extends Thread {
 
 				newpos = nextPos(curpos);
 
-				// Start of critical section
-				mutexPositions.P();
 				// Check if there is a car at nextpos
 				if (!this.checkNextPos()) {
 					continue;
 				}
-				// End of critical section
-				mutexPositions.V();
 				// If the car is about to enter the critical section
 
 				if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
@@ -166,12 +162,7 @@ class Car extends Thread {
 					positions[no][1] = curpos;
 					mutexPositions.V();
 
-					alley.alleyMutexCCW.P();
-					if (alley.ccwCounter == 0) {
-						alley.mutexAlley.P();
-					}
 					alley.enter(no);
-					alley.alleyMutexCCW.V();
 
 					// insert newpos from the occupied list
 					mutexPositions.P();
@@ -184,14 +175,9 @@ class Car extends Thread {
 					positions[no][1] = curpos;
 					mutexPositions.V();
 
-					alley.alleyMutexCW.P();
-					if (alley.cwCounter == 0) {
-						alley.mutexAlley.P();
-					}
 					alley.enter(no);
-					alley.alleyMutexCW.V();
-
-					// insert newpos from the occupied list
+					
+					// insert newpos in the occupied list
 					mutexPositions.P();
 					positions[no][1] = newpos;
 					mutexPositions.V();
@@ -218,19 +204,9 @@ class Car extends Thread {
 
 				// If the car has left the critical section
 				if (no < 5 && no != 0 && curpos.row == 9 && curpos.col == 1) {
-					alley.alleyMutexCCW.P();
 					alley.leave(no);
-					if (alley.ccwCounter == 0) {
-						alley.mutexAlley.V();
-					}
-					alley.alleyMutexCCW.V();
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
-					alley.alleyMutexCW.P();
 					alley.leave(no);
-					if (alley.cwCounter == 0) {
-						alley.mutexAlley.V();
-					}
-					alley.alleyMutexCW.V();
 				}
 
 			}
@@ -242,7 +218,8 @@ class Car extends Thread {
 		}
 	}
 
-	private boolean checkNextPos() {
+	private boolean checkNextPos() throws InterruptedException {
+		mutexPositions.P();
 		boolean occupied = false;
 		for (int i = 0; i < 9; i++) {
 			if (positions[i][0].equals(newpos) || positions[i][1].equals(newpos)) {
@@ -254,6 +231,7 @@ class Car extends Thread {
 			// Update positions array
 			positions[no][0] = curpos;
 			positions[no][1] = newpos;
+			mutexPositions.V();
 			return true;
 		} else {
 			// If tile is occupied just continue in the while loop
@@ -265,39 +243,35 @@ class Car extends Thread {
 }
 
 class Alley {
-	volatile Semaphore alleyMutexCW;
-	volatile Semaphore alleyMutexCCW;
-	volatile Semaphore mutexAlley;
 
 	int cwCounter, ccwCounter = 0;
 
-	public Alley() {
-		alleyMutexCW = new Semaphore(1);
-		alleyMutexCCW = new Semaphore(1);
-		mutexAlley = new Semaphore(1);
-
-	}
-
-	public void enter(int no) {
+	public synchronized void enter(int no) throws InterruptedException {
 		if (no < 5 && no != 0) {
+			while (cwCounter != 0) {
+				wait();
+			}
 			ccwCounter++;
 		} else if (no > 4) {
+			while (ccwCounter != 0) {
+				wait();
+			}
 			cwCounter++;
 		}
 	}
 
-	public void leave(int no) {
+	public synchronized void leave(int no) {
 		if (no < 5 && no != 0) {
 			ccwCounter--;
+			if (ccwCounter == 0) {
+				notifyAll();
+			}
 		} else if (no > 4) {
 			cwCounter--;
+			if (cwCounter == 0) {
+				notifyAll();
+			}
 		}
-	}
-
-	@Override
-	public String toString() {
-		return "alleyMutexCW: " + this.alleyMutexCW + " alleyMutexCCW: " + this.alleyMutexCCW + " mutexAlley: "
-				+ this.mutexAlley + " cwCounter: " + this.cwCounter + " ccwCounter: " + this.ccwCounter;
 	}
 
 }
@@ -344,24 +318,6 @@ class Barrier {
 		return s;
 	}
 
-	/*
-	 * public void sync() throws InterruptedException { // Wait for others to
-	 * arrive (if barrier active) if(isBarrierOn){ mutexCounter.P();
-	 * carsWaiting++; mutexCounter.V(); if(carsWaiting == carAmount){
-	 * allArrived.V(); carsWaiting = 0; } allArrived.P(); allArrived.V(); }
-	 * 
-	 * }
-	 */
-	/*
-	 * public void sync(int carNo) throws InterruptedException { // Wait for
-	 * others to arrive (if barrier active) if(isBarrierOn){ for(int i = 1; i <=
-	 * stagesAmount; i++){ arriveSems[carNo].V(); int syncWith = (carNo + (int)
-	 * Math.pow(2.0, i-1.0)) % carAmount; System.out.println("no: " + carNo +
-	 * " syncWith: " + syncWith); arriveSems[syncWith].P(); } } else { return; }
-	 * 
-	 * }
-	 */
-
 	public void sync(int carNo) throws InterruptedException { // Wait for others
 																// to arrive (if
 																// barrier
@@ -395,10 +351,8 @@ class Coordinator extends Thread {
 	public void run() {
 		while (true) {
 			for (int i = 0; i < this.noOfCars; i++) {
-				System.out.println("waiting for " + i);
 				try {
 					this.barrier.arriveSems[i].P();
-					System.out.println("passed");
 				} catch (InterruptedException e) {
 					// TODO something
 				}
