@@ -59,10 +59,12 @@ class Car extends Thread {
 
     Pos[][] positions;				//Keeps track of positions of other cars.
     Semaphore mutexPositions;			//Semaphore for mutual exclusion when driving.
-    Alley alley;					//Contains semaphores and other information for the alley.
+    Alley alley; //Contains semaphores and other information for the alley.
+    Barrier barrier;
     
-    public Car(int no, CarDisplayI cd, Gate g, Pos[][] positions, Semaphore mutexDrive, Alley alley) {
+    public Car(int no, CarDisplayI cd, Gate g, Pos[][] positions, Semaphore mutexDrive, Alley alley, Barrier barrier) {
     	this.alley = alley;
+    	this.barrier = barrier;
         this.no = no;
         this.cd = cd;
         mygate = g;
@@ -151,7 +153,7 @@ class Car extends Thread {
                 //End of critical section
                 mutexPositions.V();
                 //If the car is about to enter the critical section
-                System.out.println(this.alley);
+                
                 if (no < 5 && no !=0 && (curpos.row == 2  && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
                 	//CCW
                 	//Remove newpos from the occupied list
@@ -190,7 +192,10 @@ class Car extends Thread {
                 	positions[no][1] = newpos;
                 	mutexPositions.V();
                 }
-                
+                System.out.println(this.barrier);
+                if(curpos.col >2 &&(no <= 4 && curpos.row == 6 || no >= 5 && curpos.row == 5)){
+                	              	barrier.sync(no);
+                } 
                 //  Move to new position 
 	            cd.clear(curpos);
 	            cd.mark(curpos,newpos,col,no);
@@ -219,7 +224,6 @@ class Car extends Thread {
                 else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
                 	alley.alleyMutexCW.P();
                 	alley.leave(no);
-                	System.out.println("no: " + no + " cwCounter: " + alley.cwCounter);
                 	if(alley.cwCounter == 0) {
                 		alley.mutexAlley.V();
                 	}
@@ -273,7 +277,6 @@ class Alley {
 
 
 	public void enter(int no) {
-		System.out.println(no +" entering");
 		if (no < 5 && no != 0) {
 			ccwCounter++;
 		}
@@ -299,20 +302,142 @@ class Alley {
 	 
 }
 
+
+class Barrier {
+	Semaphore[] arriveSems;
+	Semaphore[] continueSems;
+	boolean isBarrierOn = false;
+	Semaphore allArrived = new Semaphore(0);
+	Semaphore mutexCounter = new Semaphore(1);
+	int carsWaiting = 0;
+	int carAmount;
+	int stagesAmount;
+	
+	public Barrier(int carAmount) { 
+		arriveSems = new Semaphore[9];
+		continueSems = new Semaphore[9];
+		this.carAmount = carAmount;
+		for (int i = 0; i < arriveSems.length; i++) {
+			arriveSems[i] = new Semaphore(0);
+		}
+		for (int i = 0; i < continueSems.length; i++) {
+			continueSems[i] = new Semaphore(0);
+		}
+		stagesAmount = (int) Math.ceil(Math.log(carAmount));
+		
+	}
+	@Override
+	public String toString() {
+		String  s = "              "; 
+		for(int i = 0 ; i< 9; i++) {
+			s += i + " ";
+		}
+		s += "\nArriveSems:   ";
+		for(int i = 0 ; i< 9; i++) {
+			s +=  this.arriveSems[i] + " ";
+		}
+		s += "\nContinueSems: ";
+		for(int i = 0 ; i< 9; i++) {
+			s += this.continueSems[i] + " ";
+		}
+		s+= "\n \n";
+		return s;
+	}
+
+	
+	/*public void sync() throws InterruptedException { // Wait for others to arrive (if barrier active)
+		   if(isBarrierOn){
+			   mutexCounter.P();
+			   carsWaiting++;
+			   mutexCounter.V();
+			   if(carsWaiting == carAmount){
+				   allArrived.V();
+				   carsWaiting = 0;
+			   }
+			   allArrived.P();
+			   allArrived.V();
+		   }
+		  
+	}*/
+	/*public void sync(int carNo) throws InterruptedException { // Wait for others to arrive (if barrier active)
+		   if(isBarrierOn){
+			   for(int i = 1; i <= stagesAmount; i++){
+				   arriveSems[carNo].V();
+				   int syncWith = (carNo + (int) Math.pow(2.0, i-1.0)) % carAmount;
+				   System.out.println("no: " + carNo + " syncWith: " + syncWith);
+				   arriveSems[syncWith].P();
+			   } 
+		   } else {
+			   return;
+		   }
+		  
+	   }*/
+
+	
+	public void sync(int carNo) throws InterruptedException { // Wait for others to arrive (if barrier active)
+		if(isBarrierOn){
+			if (carNo == 8) {
+				System.out.println("8 is waiting");
+			}
+			this.arriveSems[carNo].V();
+			this.continueSems[carNo].P();
+		}
+		  
+	}
+	public void on() {     // Activate barrier
+		isBarrierOn = true;
+	}
+
+	public void off() { 		// Deactivate barrier 
+		isBarrierOn = false;
+	}
+
+}
+class Coordinator extends Thread {
+	int noOfCars;
+	Barrier barrier;
+	
+	
+	Coordinator(int noOfCars, Barrier barrier) {
+		this.noOfCars = noOfCars;
+		this.barrier = barrier;
+	}
+
+	public void run() {
+       for (int i = 0; i < this.noOfCars; i++) {
+    	   System.out.println("waiting for "+ i);
+    	   try {
+			this.barrier.arriveSems[i].P();
+			System.out.println("passed");
+    	   } catch (InterruptedException e) {
+    		   //TODO something
+    	   }
+       }
+       for (int i = 0; i < this.noOfCars; i++) {
+    	   this.barrier.continueSems[i].V();
+       }
+	}
+}
+
 public class CarControl implements CarControlI{
 
     CarDisplayI cd;           // Reference to GUI
     Car[]  car;               // Cars
     Gate[] gate;              // Gates
     static volatile Alley alley;
+    static volatile Barrier barrier;
     static volatile Semaphore mutexDrive;
     static volatile Pos[][] positions;
     
     public CarControl(CarDisplayI cd) {
         this.cd = cd;
+        
         car  = new  Car[9];
         gate = new Gate[9];
         alley = new Alley();
+        barrier = new Barrier(9);
+        Coordinator c = new Coordinator(9, barrier);
+		c.start();
         
        
         positions = new Pos[9][2];
@@ -320,7 +445,7 @@ public class CarControl implements CarControlI{
 
         for (int no = 0; no < 9; no++) {
             gate[no] = new Gate();
-            car[no] = new Car(no,cd,gate[no], positions, mutexDrive,alley);
+            car[no] = new Car(no,cd,gate[no], positions, mutexDrive,alley,barrier);
             car[no].start();
         } 
     }
@@ -334,11 +459,11 @@ public class CarControl implements CarControlI{
     }
 
     public void barrierOn() { 
-        cd.println("Barrier On not implemented in this version");
+        barrier.on();
     }
 
     public void barrierOff() { 
-        cd.println("Barrier Off not implemented in this version");
+        barrier.off();
     }
 
     public void barrierSet(int k) { 
@@ -367,9 +492,3 @@ public class CarControl implements CarControlI{
     }
 
 }
-
-
-
-
-
-
