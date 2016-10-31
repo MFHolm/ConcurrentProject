@@ -153,7 +153,7 @@ class Car extends Thread {
                 //End of critical section
                 mutexPositions.V();
                 //If the car is about to enter the critical section
-                System.out.println(this.alley);
+             
                 if (no < 5 && no !=0 && (curpos.row == 2  && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
                 	//CCW
                 	//Remove newpos from the occupied list
@@ -279,7 +279,7 @@ class Alley {
 
 
 	public void enter(int no) {
-		System.out.println(no +" entering");
+		
 		if (no < 5 && no != 0) {
 			ccwCounter++;
 		}
@@ -326,20 +326,22 @@ class Barrier {
 	}
 
 	
-	public void sync() throws InterruptedException { // Wait for others to arrive (if barrier active)
+	/*public void sync() throws InterruptedException { // Wait for others to arrive (if barrier active)
 		   if(isBarrierOn){
 			   mutexCounter.P();
 			   carsWaiting++;
 			   mutexCounter.V();
 			   if(carsWaiting == carAmount){
-				   allArrived.V();
+				   for(int i = 1; i<=9; i++){
+					   allArrived.V();
+				   }
 				   carsWaiting = 0;
 			   }
 			   allArrived.P();
 		   }
 		  
-	}
-	  /* public void sync(int carNo) throws InterruptedException { // Wait for others to arrive (if barrier active)
+	}*/
+	  public void sync(int carNo) throws InterruptedException { // Wait for others to arrive (if barrier active)
 		   if(isBarrierOn){
 			   for(int i = 1; i <= stagesAmount; i++){
 				   arriveSems[carNo].V();
@@ -350,7 +352,7 @@ class Barrier {
 			   return;
 		   }
 		  
-	   }  */
+	   } 
 
 	   public void on() {     // Activate barrier
 		   isBarrierOn = true;
