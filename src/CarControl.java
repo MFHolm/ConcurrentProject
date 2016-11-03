@@ -79,6 +79,7 @@ class Car extends Thread {
 		startpos = cd.getStartPos(no);
 		barpos = cd.getBarrierPos(no); // For later use
 		this.positions = positions;
+	
 
 		col = chooseColor(no);
 
@@ -91,6 +92,7 @@ class Car extends Thread {
 		positions[no][0] = startpos;
 		positions[no][1] = startpos;
 		this.mutexPositions = mutexDrive;
+		
 
 	}
 
@@ -198,7 +200,7 @@ class Car extends Thread {
 				}
 				System.out.println(this.barrier);
 				if (curpos.col > 2 && (no <= 4 && curpos.row == 6 || no >= 5 && curpos.row == 5)) {
-					barrier.sync(no);
+					barrier.sync();
 				}
 				// Move to new position
 				cd.clear(curpos);
@@ -303,30 +305,21 @@ class Alley {
 }
 
 class Barrier {
-	Semaphore[] arriveSems;
-	Semaphore[] continueSems;
+	Semaphore turnstile1 = new Semaphore(0);
+	Semaphore turnstile2 = new Semaphore(1);
+	Semaphore mutex = new Semaphore(1);
 	boolean isBarrierOn = false;
-	Semaphore allArrived = new Semaphore(0);
-	Semaphore mutexCounter = new Semaphore(1);
+	
 	int carsWaiting = 0;
 	int carAmount;
-	int stagesAmount;
+	
+	
 
 	public Barrier(int carAmount) {
 		this.carAmount = carAmount;
-		arriveSems = new Semaphore[9];
-		continueSems = new Semaphore[9];
-		
-		stagesAmount = (int) Math.ceil(Math.log(carAmount));
-		for (int i = 0; i < arriveSems.length; i++) {
-			arriveSems[i] = new Semaphore(0);
-		}
-		for (int i = 0; i < continueSems.length; i++) {
-			continueSems[i] = new Semaphore(0);
-		}
 	}
 
-	@Override
+	/*@Override
 	public String toString() {
 		String s = "              ";
 		for (int i = 0; i < 9; i++) {
@@ -342,18 +335,36 @@ class Barrier {
 		}
 		s += "\n \n";
 		return s;
-	}
+	}*/
 
-
-	public void sync(int carNo) throws InterruptedException { // Wait for others
-																// to arrive (if
-																// barrier
-																// active)
-		if (isBarrierOn) {
-			this.arriveSems[carNo].V();
-			this.continueSems[carNo].P();
+	public void sync() throws InterruptedException { // Wait for others // active)
+		if(isBarrierOn){
+			mutex.P();
+			carsWaiting++;
+			if(carsWaiting == carAmount){
+				turnstile2.P();
+				turnstile1.V();
+			}
+			mutex.V();
+			
+			turnstile1.P();
+			turnstile1.V();
+			
+			//barrier
+			
+			mutex.P();
+			carsWaiting--;
+			if(carsWaiting == 0){
+				turnstile1.P();
+				turnstile2.V();
+			}
+			mutex.V();
+			
+			turnstile2.P();
+			turnstile2.V();
+			
 		}
-
+	
 	}
 
 	public void on() { // Activate barrier
@@ -363,46 +374,27 @@ class Barrier {
 	}
 
 	public void off() { // Deactivate barrier
-		for (int i = 0; i < arriveSems.length; i++) {
-			arriveSems[i].V();
-		}
 		isBarrierOn = false;
-		for (int i = 0; i < arriveSems.length; i++) {
-			arriveSems[i] = new Semaphore(0);
+		try {
+			mutex.P();
+			carsWaiting = carAmount;
+			turnstile2.P();
+			turnstile1.V();
+		} catch (InterruptedException e) {
+			
 		}
-		for (int i = 0; i < continueSems.length; i++) {
-			continueSems[i] = new Semaphore(0);
+		try {
+			sync();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		mutex.V();
+
 	}
 
 }
 
-class Coordinator extends Thread {
-	int noOfCars;
-	Barrier barrier;
-
-	Coordinator(int noOfCars, Barrier barrier) {
-		this.noOfCars = noOfCars;
-		this.barrier = barrier;
-	}
-
-	public void run() {
-		while (true) {
-			for (int i = 0; i < this.noOfCars; i++) {
-				System.out.println("waiting for " + i);
-				try {
-					this.barrier.arriveSems[i].P();
-					System.out.println("passed");
-				} catch (InterruptedException e) {
-					// TODO something
-				}
-			}
-			for (int i = 0; i < this.noOfCars; i++) {
-				this.barrier.continueSems[i].V();
-			}
-		}
-	}
-}
 
 public class CarControl implements CarControlI {
 
@@ -421,8 +413,8 @@ public class CarControl implements CarControlI {
 		gate = new Gate[9];
 		alley = new Alley();
 		barrier = new Barrier(9);
-		Coordinator c = new Coordinator(9, barrier);
-		c.start();
+		//Coordinator c = new Coordinator(9, barrier);
+		//c.start();
 
 		positions = new Pos[9][2];
 		mutexDrive = new Semaphore(1);
