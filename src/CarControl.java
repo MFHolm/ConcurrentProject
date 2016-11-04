@@ -319,23 +319,11 @@ class Barrier {
 		this.carAmount = carAmount;
 	}
 
-	/*@Override
+	@Override
 	public String toString() {
-		String s = "              ";
-		for (int i = 0; i < 9; i++) {
-			s += i + " ";
-		}
-		s += "\nArriveSems:   ";
-		for (int i = 0; i < 9; i++) {
-			s += this.arriveSems[i] + " ";
-		}
-		s += "\nContinueSems: ";
-		for (int i = 0; i < 9; i++) {
-			s += this.continueSems[i] + " ";
-		}
-		s += "\n \n";
+		String s = "carsWaiting: " + carsWaiting + " turnstile1: " + turnstile1 + " turnstile2: " + turnstile2 + " mutex: "+ mutex;
 		return s;
-	}*/
+	}
 
 	public void sync() throws InterruptedException { // Wait for others // active)
 		if(isBarrierOn){
@@ -362,7 +350,6 @@ class Barrier {
 			
 			turnstile2.P();
 			turnstile2.V();
-			
 		}
 	
 	}
@@ -374,23 +361,17 @@ class Barrier {
 	}
 
 	public void off() { // Deactivate barrier
+		System.out.println("barrier off");
 		isBarrierOn = false;
 		try {
 			mutex.P();
-			carsWaiting = carAmount;
-			turnstile2.P();
-			turnstile1.V();
+			turnstile2.P();//Close the second turnstile
+			turnstile1.V();//Open the first turnstile to let the first car pass through
+			//The first car will then let the other cars through
 		} catch (InterruptedException e) {
-			
-		}
-		try {
-			sync();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//TODO 
 		}
 		mutex.V();
-
 	}
 
 }
