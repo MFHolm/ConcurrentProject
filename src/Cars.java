@@ -74,7 +74,8 @@ class Tile extends JPanel {
     private int stainty = 0;
     private int staintd = 0;
 
-
+    private Pos p;
+    
     private static boolean light (Color c) {
         return (c.getRed() + 2* c.getGreen() + c.getBlue()) > 600;
     }

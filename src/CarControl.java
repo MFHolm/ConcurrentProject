@@ -210,6 +210,35 @@ class Car extends Thread {
 
 			}
 
+		} catch(InterruptedException e) {
+			System.out.println("car " + no + " curpos: "+ curpos + " newpos: "+ newpos);
+			//Clear tile
+			if (!curpos.equals(newpos)) {
+				cd.clear(curpos, newpos);
+			}
+			else {
+				cd.clear(curpos);
+			}
+			
+			//Update positions array
+			try {
+				mutexPositions.P();
+			} catch (InterruptedException e1) {
+				//TODO something good
+				e1.printStackTrace();
+			}
+			if (no == 0) {
+				positions[no][0] = new Pos(5,2);
+				positions[no][2] = new Pos(5,2);
+			} else if (no < 5) {
+				positions[no][0] = new Pos(7,3 + no);
+				positions[no][1] = new Pos(7,3 + no);
+			}
+			else if (no > 4){
+				positions[no][0] = new Pos(4,7 + no);
+				positions[no][1] = new Pos(4,7 + no);
+			}
+			mutexPositions.V();
 		} catch (Exception e) {
 			cd.println("Exception in Car no. " + no);
 			System.err.println("Exception in Car no. " + no + ":" + e);
