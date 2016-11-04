@@ -324,8 +324,8 @@ class Barrier {
 		String s = "carsWaiting: " + carsWaiting + " turnstile1: " + turnstile1 + " turnstile2: " + turnstile2 + " mutex: "+ mutex;
 		return s;
 	}
-
-	public void sync() throws InterruptedException { // Wait for others // active)
+	// Wait for others (when barrier is active)
+	public void sync() throws InterruptedException { 
 		if(isBarrierOn){
 			mutex.P();
 			carsWaiting++;
@@ -356,22 +356,23 @@ class Barrier {
 
 	public void on() { // Activate barrier
 		isBarrierOn = true;
-		
-		
 	}
 
 	public void off() { // Deactivate barrier
-		System.out.println("barrier off");
-		isBarrierOn = false;
+		if (isBarrierOn) {
+			isBarrierOn = false;
+		
 		try {
-			mutex.P();
-			turnstile2.P();//Close the second turnstile
-			turnstile1.V();//Open the first turnstile to let the first car pass through
-			//The first car will then let the other cars through
+			//Close the second turnstile
+			turnstile2.P();
 		} catch (InterruptedException e) {
-			//TODO 
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		mutex.V();
+		//Open the first turnstile to let the first car pass through
+		turnstile1.V();
+		//The first car will then let the other cars through
+		}
 	}
 
 }
