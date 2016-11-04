@@ -164,7 +164,7 @@ class Car extends Thread {
 
 					alley.enter(no);
 
-					// insert newpos from the occupied list
+					// insert newpos into the occupied list
 					mutexPositions.P();
 					positions[no][1] = newpos;
 					mutexPositions.V();
@@ -211,13 +211,21 @@ class Car extends Thread {
 			}
 
 		} catch(InterruptedException e) {
-			System.out.println("car " + no + " curpos: "+ curpos + " newpos: "+ newpos);
+			
+			if (curpos.row <= 9 && curpos.col == 0 || curpos.row == 1 && curpos.col <= 2) {
+				alley.leave(no);
+			}
+			System.out.println("car " + no + " curpos: "+ curpos + " newpos: "+ newpos); 
 			//Clear tile
-			if (!curpos.equals(newpos)) {
-				cd.clear(curpos, newpos);
+			Pos pos1 = positions[no][0];
+			Pos pos2 = positions[no][1];
+			if (!pos1.equals(pos2) && newpos != null) {
+				System.out.println("clearing pos1 :" + pos1 + " and pos2: "+ pos2);
+				cd.clear(pos1, pos2);
 			}
 			else {
-				cd.clear(curpos);
+				System.out.println("clearing pos1 :" + pos1);
+				cd.clear(pos1);
 			}
 			
 			//Update positions array
@@ -408,7 +416,10 @@ public class CarControl implements CarControlI {
 	}
 
 	public void restoreCar(int no) {
-		cd.println("Restore Car not implemented in this version");
+		if (!car[no].isAlive()) {//Only restart if it is not running
+			car[no] = new Car(no, cd, gate[no], positions, mutexDrive, alley, barrier);
+			car[no].start();
+		}
 	}
 
 	/* Speed settings for testing purposes */

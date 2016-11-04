@@ -74,7 +74,7 @@ class Tile extends JPanel {
     private int stainty = 0;
     private int staintd = 0;
 
-    private Pos p;
+    private Pos p; //OBS!!! Dette er tilføjet til debuging
     
     private static boolean light (Color c) {
         return (c.getRed() + 2* c.getGreen() + c.getBlue()) > 600;
@@ -85,7 +85,8 @@ class Tile extends JPanel {
         setPreferredSize(new Dimension(edge,edge));
          setBackground(bgcolor);
         setOpaque(true);
-
+        this.p = p;//OBS!!! Dette er tilføjet til debuging
+        
         addMouseListener(new MouseAdapter () {
             public void mousePressed(MouseEvent e) {
                 if (isstartpos) {
@@ -120,6 +121,7 @@ class Tile extends JPanel {
     }
 
     public void exit() {
+    	System.out.println("exits "+ p + " users: "+ users);
         users--;
         // repaint();
     }
