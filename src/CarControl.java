@@ -65,12 +65,11 @@ class Car extends Thread {
 	Pos curpos; // Current position
 	Pos newpos; // New position to go to
 
-	Pos[][] positions; // Keeps track of positions of other cars.
-	Semaphore mutexPositions; // Semaphore for mutual exclusion when driving.
+	Semaphore[][] mutexPos; // Keeps track of positions of other cars.
 	Alley alley; // Contains semaphores and other information for the alley.
 	Barrier barrier;
 
-	public Car(int no, CarDisplayI cd, Gate g, Pos[][] positions, Semaphore mutexDrive, Alley alley, Barrier barrier) {
+	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier) {
 		this.alley = alley;
 		this.barrier = barrier;
 		this.no = no;
@@ -78,7 +77,7 @@ class Car extends Thread {
 		mygate = g;
 		startpos = cd.getStartPos(no);
 		barpos = cd.getBarrierPos(no); // For later use
-		this.positions = positions;
+		this.mutexPos = mutexPos;
 	
 
 		col = chooseColor(no);
@@ -89,9 +88,8 @@ class Car extends Thread {
 			variation = 0;
 			setPriority(Thread.MAX_PRIORITY);
 		}
-		positions[no][0] = startpos;
-		positions[no][1] = startpos;
-		this.mutexPositions = mutexDrive;
+
+		
 		
 
 	}
@@ -150,83 +148,70 @@ class Car extends Thread {
 				}
 
 				newpos = nextPos(curpos);
-
-				// Start of critical section
-				mutexPositions.P();
-				// Check if there is a car at nextpos
-				if (!this.checkNextPos()) {
-					continue;
-				}
-				// End of critical section
-				mutexPositions.V();
+				
+				
 				// If the car is about to enter the critical section
 
 				if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
 					// CCW
-					// Remove newpos from the occupied list
-					mutexPositions.P();
-					positions[no][1] = curpos;
-					mutexPositions.V();
-
+					//Claim access to alley for CCW.
 					alley.alleyMutexCCW.P();
+					//If first car going CCW then attempt to claim access to alley.
 					if (alley.ccwCounter == 0) {
 						alley.mutexAlley.P();
 					}
 					alley.enter(no);
 					alley.alleyMutexCCW.V();
-
-					// insert newpos from the occupied list
-					mutexPositions.P();
-					positions[no][1] = newpos;
-					mutexPositions.V();
+					
 				} else if (no > 4 && curpos.row == 10 && curpos.col == 0) {
 					// CW
-					// Remove newpos from the occupied list
-					mutexPositions.P();
-					positions[no][1] = curpos;
-					mutexPositions.V();
-
+					//Symmetrical to the access for CCW.
 					alley.alleyMutexCW.P();
+		
 					if (alley.cwCounter == 0) {
 						alley.mutexAlley.P();
 					}
 					alley.enter(no);
 					alley.alleyMutexCW.V();
 
-					// insert newpos from the occupied list
-					mutexPositions.P();
-					positions[no][1] = newpos;
-					mutexPositions.V();
+				
 				}
 				System.out.println(this.barrier);
 				if (curpos.col > 2 && (no <= 4 && curpos.row == 6 || no >= 5 && curpos.row == 5)) {
+					//If at barrier location, wait for the remaining cars (given that the barrier is on).
 					barrier.sync();
 				}
+				
+				//Claim the next position by calling P() on its semaphore. This is done after the checking for 
+				//alley entry otherwise you could be waiting at the alley while having claimed the next position.
+				mutexPos[newpos.row][newpos.col].P();
+				
 				// Move to new position
 				cd.clear(curpos);
 				cd.mark(curpos, newpos, col, no);
 				sleep(speed());
 
-				// Remove curpos from occupied list. This ensures that there is
-				// no gap between the cars
-				mutexPositions.P();
-				positions[no][0] = newpos;
-				mutexPositions.V();
-
+			
+				
+				//Right when moving, release the semaphore of the previous position.
+				mutexPos[curpos.row][curpos.col].V();
 				cd.clear(curpos, newpos);
 				cd.mark(newpos, col, no);
-
+				
 				curpos = newpos;
 
 				// If the car has left the critical section
 				if (no < 5 && no != 0 && curpos.row == 9 && curpos.col == 1) {
+					//Claim access to alley for CCW cars.
 					alley.alleyMutexCCW.P();
 					alley.leave(no);
+					//If the car is the last to leave alley, then release the lock of the alley.
 					if (alley.ccwCounter == 0) {
 						alley.mutexAlley.V();
 					}
 					alley.alleyMutexCCW.V();
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
+					//Symmetrical to the solution for CCW.
 					alley.alleyMutexCW.P();
 					alley.leave(no);
 					if (alley.cwCounter == 0) {
@@ -244,7 +229,7 @@ class Car extends Thread {
 		}
 	}
 
-	private boolean checkNextPos() {
+	/*private boolean checkNextPos() {
 		boolean occupied = false;
 		for (int i = 0; i < 9; i++) {
 			if (positions[i][0].equals(newpos) || positions[i][1].equals(newpos)) {
@@ -262,11 +247,13 @@ class Car extends Thread {
 			mutexPositions.V();
 			return false;
 		}
-	}
+	}*/
 
 }
 
 class Alley {
+	
+	
 	volatile Semaphore alleyMutexCW;
 	volatile Semaphore alleyMutexCCW;
 	volatile Semaphore mutexAlley;
@@ -386,7 +373,7 @@ public class CarControl implements CarControlI {
 	static volatile Alley alley;
 	static volatile Barrier barrier;
 	static volatile Semaphore mutexDrive;
-	static volatile Pos[][] positions;
+	static volatile Semaphore[][] mutexPos;
 
 	public CarControl(CarDisplayI cd) {
 		this.cd = cd;
@@ -398,12 +385,20 @@ public class CarControl implements CarControlI {
 		//Coordinator c = new Coordinator(9, barrier);
 		//c.start();
 
-		positions = new Pos[9][2];
+		mutexPos = new Semaphore[11][12];
 		mutexDrive = new Semaphore(1);
+		
+		for(int row = 0; row < 11; row++){
+			for(int col = 0; col < 12; col++){
+				mutexPos[row][col] = new Semaphore(1);
+			}
+		}
+		
+		
 
 		for (int no = 0; no < 9; no++) {
 			gate[no] = new Gate();
-			car[no] = new Car(no, cd, gate[no], positions, mutexDrive, alley, barrier);
+			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
 			car[no].start();
 		}
 	}
