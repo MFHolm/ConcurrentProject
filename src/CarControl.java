@@ -193,10 +193,10 @@ class Car extends Thread {
 
 			
 				
+				cd.clear(curpos, newpos);
+				cd.mark(newpos, col, no);				
 				//Right when moving, release the semaphore of the previous position.
 				mutexPos[curpos.row][curpos.col].V();
-				cd.clear(curpos, newpos);
-				cd.mark(newpos, col, no);
 				
 				curpos = newpos;
 
@@ -326,7 +326,6 @@ class Barrier {
 			turnstile1.V();
 			
 			//barrier
-			
 			mutex.P();
 			carsWaiting--;
 			if(carsWaiting == 0){
