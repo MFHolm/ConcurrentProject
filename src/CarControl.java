@@ -177,7 +177,7 @@ class Car extends Thread {
 				
 				}
 				System.out.println(this.barrier);
-				if (curpos.col > 2 && (no <= 4 && curpos.row == 6 || no >= 5 && curpos.row == 5)) {
+				if (curpos.equals(barpos)) {
 					//If at barrier location, wait for the remaining cars (given that the barrier is on).
 					barrier.sync();
 				}
@@ -359,7 +359,7 @@ class Barrier {
 				mutex.V();
 			//The first car will then let the other cars through
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				System.err.println("Interrupted Exception for Barrier off()");
 				e.printStackTrace();
 			}
 		}
@@ -375,7 +375,6 @@ public class CarControl implements CarControlI {
 	Gate[] gate; // Gates
 	static volatile Alley alley;
 	static volatile Barrier barrier;
-	static volatile Semaphore mutexDrive;
 	static volatile Semaphore[][] mutexPos;
 
 	public CarControl(CarDisplayI cd) {
@@ -385,19 +384,15 @@ public class CarControl implements CarControlI {
 		gate = new Gate[9];
 		alley = new Alley();
 		barrier = new Barrier(9);
-		//Coordinator c = new Coordinator(9, barrier);
-		//c.start();
+
 
 		mutexPos = new Semaphore[11][12];
-		mutexDrive = new Semaphore(1);
 		
 		for(int row = 0; row < 11; row++){
 			for(int col = 0; col < 12; col++){
 				mutexPos[row][col] = new Semaphore(1);
 			}
 		}
-		
-		
 
 		for (int no = 0; no < 9; no++) {
 			gate[no] = new Gate();

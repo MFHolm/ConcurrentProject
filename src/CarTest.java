@@ -27,33 +27,43 @@ public class CarTest extends Thread {
             	cars.startAll();
 
                 break;
-                
+            
             case 1:
-            	// Same test as last case, except with high speeds.
+            	//Run cars in one direction.
+            	for (int i = 1; i < 5; i++) {
+            		cars.startCar(i);
+				}
+            	sleep(10000);
+                cars.stopAll();
+                break;
+                
+            case 2:
+            	//Same test as last case, except with high speeds.
 
             	cars.startAll();
 				for (int i = 1; i < 9; i++) {
 					cars.setSpeed(i, 1);
-				};
+				}
             	
             	break;
             	
-            case 2:
-            	// Testing barrier with regular speeds.
+            case 3:
+            	//Testing barrier with regular speeds.
             	cars.barrierOn();
             	cars.startAll();
             	break;
             	
-            case 3:
-            	// Testing barrier with extreme speeds.
+            	
+            case 4:
+            	//Testing barrier with extreme speeds.
             	cars.barrierOn();
             	cars.startAll();
             	for (int i = 1; i < 9; i++) {
 					cars.setSpeed(i, 1);
-				};
+				}
             	break;
             
-            case 4:
+            case 5:
             	// Tests if turning the barrier on and off
             	// doesn't cause problems.
             	
@@ -65,7 +75,9 @@ public class CarTest extends Thread {
             	cars.barrierOn();
             	break;
             
-            case 5:
+            case 6: {
+            	// Test that turns the barrier on and off
+            	// for thirty seconds.
             	cars.startAll();
             	long start = Calendar.getInstance().getTimeInMillis();
             	long now;
@@ -77,19 +89,26 @@ public class CarTest extends Thread {
             		now = Calendar.getInstance().getTimeInMillis();
             	} while(start+30000 > now);
             	break;
-            
-            case 18: 
-            	//Barrier on and off
-            	cars.barrierOn();
-            	sleep(100);
+            }	
+            case 7: {
+            	//Same as previous case, except the speed is extreme.
+            	for (int i = 1; i < 9; i++) {
+					cars.setSpeed(i, 1);
+				};
             	cars.startAll();
-            	sleep(100);
-            	cars.barrierOff();
-            	sleep(100);
-            	cars.barrierOn();
-            	sleep(100);
-            	cars.barrierOff();
-            	
+            	long start = Calendar.getInstance().getTimeInMillis();
+            	long now;
+            	do {
+            		cars.barrierOn();
+            		sleep(250);
+            		cars.barrierOff();
+            		sleep(250);
+            		now = Calendar.getInstance().getTimeInMillis();
+            	} while(start+30000 > now);
+            }
+            	break;
+            
+      
             
             case 19:
                 // Demonstration of speed setting.
