@@ -134,8 +134,9 @@ class Car extends Thread {
 			speed = chooseSpeed();
 			curpos = startpos;
 			cd.mark(curpos, col, no);
-
-			while (true) {
+			boolean hasBeenInterrupted = false; //Used to check if while loop should keep running 
+			
+			while (!hasBeenInterrupted) {
 				sleep(speed());
 
 				if (atGate(curpos)) {
@@ -144,35 +145,41 @@ class Car extends Thread {
 				}
 
 				newpos = nextPos(curpos);
-
-				// If the car is about to enter the critical section
-				if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
-					// CCW
-					alley.enter(no);
-				} else if (no > 4 && curpos.row == 10 && curpos.col == 0) {
-					// CW
-					alley.enter(no);
+				try {
+					// If the car is about to enter the critical section
+					if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
+						// CCW
+						alley.enter(no);
+					} else if (no > 4 && curpos.row == 10 && curpos.col == 0) {
+						// CW
+						alley.enter(no);
+					}
+					//If car is at the position right before the barrier
+					if (curpos.equals(barpos)) {
+						barrier.sync();
+					}
+					//Claim the next position by calling P() on its semaphore. This is done after the checking for 
+					//alley entry otherwise you could be waiting at the alley while having claimed the next position.
+					mutexPos[newpos.row][newpos.col].P();
+				} catch (InterruptedException e) {
+					//If thread has been interrupted while car is waiting. 
+					cd.clear(curpos);
+					mutexPos[curpos.row][curpos.col].V();
+					hasBeenInterrupted = true;//This is used to prevent while loop to run
+					continue;//Break out of the loop
 				}
-				//If car is at the postion right before the bar
-				if (curpos.equals(barpos)) {
-					barrier.sync();
-				}
-				
-				//Claim the next position by calling P() on its semaphore. This is done after the checking for 
-				//alley entry otherwise you could be waiting at the alley while having claimed the next position.
-				mutexPos[newpos.row][newpos.col].P();
 				
 				// Move to new position
 				cd.clear(curpos);
 				cd.mark(curpos, newpos, col, no);
 				sleep(speed());
 
-				
 				cd.clear(curpos, newpos);
 				cd.mark(newpos, col, no);
 				
-				//Right when moving, release the semaphore of the previous position.
+				//Release the semaphore of the previous position
 				mutexPos[curpos.row][curpos.col].V();
+				
 				curpos = newpos;
 
 				// If the car has left the critical section
@@ -181,29 +188,30 @@ class Car extends Thread {
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
 					alley.leave(no);
 				}
-
 			}
-
 		} catch(InterruptedException e) {
-			
+			System.out.println("interrupted " + no);
 			if (curpos.row <= 9 && curpos.col == 0 || curpos.row == 1 && curpos.col <= 2) {
+				//If thread has been interrupted while car is in the alley
 				alley.leave(no);
 			}
 			//Clear tile
-			if (!newpos.equals(curpos) && newpos != null) {
+			if (!curpos.equals(newpos) && newpos != null) {
+				//If thread has been interrupted while car is marked between two tiles
 				cd.clear(newpos, curpos);
+				mutexPos[newpos.row][newpos.col].V();
+				mutexPos[curpos.row][curpos.col].V();
 			}
 			else {
+				//If thread is interrupted while car is marked on one tile
 				cd.clear(curpos);
+				mutexPos[curpos.row][curpos.col].V();
 			}
-		} catch (Exception e) {
-			cd.println("Exception in Car no. " + no);
-			System.err.println("Exception in Car no. " + no + ":" + e);
-			e.printStackTrace();
-		}
+		} 
 	}
 }
 
+//A monitor to ensure mutual exclusion in the alley for cars running in opposite directions
 class Alley {
 
 	int cwCounter, ccwCounter = 0;
@@ -211,11 +219,13 @@ class Alley {
 	public synchronized void enter(int no) throws InterruptedException {
 		if (no < 5 && no != 0) {
 			while (cwCounter != 0) {
+				//Waiting for cw counter to become 0
 				wait();
 			}
 			ccwCounter++;
 		} else if (no > 4) {
 			while (ccwCounter != 0) {
+				//Waiting for ccw counter to become 0
 				wait();
 			}
 			cwCounter++;
@@ -226,18 +236,20 @@ class Alley {
 		if (no < 5 && no != 0) {
 			ccwCounter--;
 			if (ccwCounter == 0) {
+				//If this is the last to leave, notify all waiting threads
 				notifyAll();
 			}
 		} else if (no > 4) {
 			cwCounter--;
 			if (cwCounter == 0) {
+				//If this is the last to leave, notify all waiting threads
 				notifyAll();
 			}
 		}
 	}
 
 }
-
+//A monitor to create barrier synchronization at the barrier
 class Barrier {
 	private boolean isBarrierOn = false;
 	private int carAmount;
@@ -247,19 +259,20 @@ class Barrier {
 		this.carAmount = carAmount;
 		
 	}
-	private int round = 0;
+	private int round = 0;//Round is used to prevent spurious wake-ups
 	
 	// Wait for others to arrive (if barrier active)
 	public synchronized void sync() throws InterruptedException { 
 		if (isBarrierOn) {
 			carsWaiting++;
-			int myRound = round;//Round is used to prevent spurious wake-ups
+			int myRound = round;
 			while(myRound == round && carsWaiting < carAmount) {
+				//Waiting for the round to change and for all cars to arrive
 				wait();
 			}
 			//Wake up and increment round
 			if (carsWaiting == carAmount) {
-				carsWaiting = 0;
+				carsWaiting = 0;//Reset carsWaiting
 				round++;
 				notifyAll();
 			}
@@ -346,13 +359,20 @@ public class CarControl implements CarControlI {
 	}
 
 	public void removeCar(int no) {
-		car[no].interrupt();
+		System.out.println("trying to remove");
+		if (car[no].isAlive()) {
+			System.out.println("setting interrupted flag");
+			car[no].interrupt();
+		}
 	}
 
 	public void restoreCar(int no) {
+		System.out.println("trying to restore");
 		if (!car[no].isAlive()) {//Only restart if it is not running
 			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
+			System.out.println("restoring");
 			car[no].start();
+			System.out.println("started");
 		}
 	}
 
