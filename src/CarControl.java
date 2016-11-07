@@ -348,17 +348,21 @@ class Barrier {
 	public void off() { // Deactivate barrier
 		if (isBarrierOn) {
 			isBarrierOn = false;
-		
-		try {
-			//Close the second turnstile
-			turnstile2.P();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		//Open the first turnstile to let the first car pass through
-		turnstile1.V();
-		//The first car will then let the other cars through
+			try {
+				mutex.P();
+				if (carsWaiting > 0) {
+				//Close the second turnstile
+				turnstile2.P();
+				
+				//Open the first turnstile to let the first car pass through
+				turnstile1.V();
+				}
+				mutex.V();
+			//The first car will then let the other cars through
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
