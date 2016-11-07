@@ -25,6 +25,15 @@ public class CarTest extends Thread {
                 cars.stopAll();
                 break;
 
+            case 1:
+            	cars.barrierOn();
+            	cars.startAll();
+            	sleep(3000);
+            	cars.barrierOff();
+            	cars.barrierOn();
+            	cars.barrierOff();
+            	cars.barrierOn();
+            	break;
             case 19:
                 // Demonstration of speed setting.
                 // Change speed to double of default values

@@ -121,7 +121,6 @@ class Tile extends JPanel {
     }
 
     public void exit() {
-    	System.out.println("exits "+ p + " users: "+ users);
         users--;
         // repaint();
     }
