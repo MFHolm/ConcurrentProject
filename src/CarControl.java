@@ -143,7 +143,7 @@ class Car extends Thread {
 					mygate.pass();
 					speed = chooseSpeed();
 				}
-
+				System.out.println(barrier);
 				newpos = nextPos(curpos);
 				try {
 					// If the car is about to enter the critical section
@@ -165,6 +165,11 @@ class Car extends Thread {
 					//If thread has been interrupted while car is waiting. 
 					cd.clear(curpos);
 					mutexPos[curpos.row][curpos.col].V();
+					if (curpos.equals(barpos)) {
+						//If car was waiting at the barrier
+						barrier.decrementCarsWaiting();//Decrement how many cars are waiting at the barrier
+					}
+					barrier.editCarAmount(-1);//Decrement car amount
 					hasBeenInterrupted = true;//This is used to prevent while loop to run
 					continue;//Break out of the loop
 				}
@@ -207,6 +212,7 @@ class Car extends Thread {
 				cd.clear(curpos);
 				mutexPos[curpos.row][curpos.col].V();
 			}
+			barrier.editCarAmount(-1);//Decrement car amount
 		} 
 	}
 }
@@ -282,7 +288,17 @@ class Barrier {
 	public String toString() {
 		return "carsWaiting: "+ carsWaiting + " carAmount: "+ carAmount;
 	}
-
+	
+	//Edits car amount with the given amount
+	public synchronized void editCarAmount(int change) {
+		this.carAmount += change;
+		notifyAll();
+	}
+	
+	public synchronized void decrementCarsWaiting() {
+		this.carsWaiting --;
+	}
+	
 	public synchronized void on() { // Activate barrier
 		if (!isBarrierOn) {
 			carsWaiting = 0;
@@ -359,20 +375,16 @@ public class CarControl implements CarControlI {
 	}
 
 	public void removeCar(int no) {
-		System.out.println("trying to remove");
 		if (car[no].isAlive()) {
-			System.out.println("setting interrupted flag");
 			car[no].interrupt();
 		}
 	}
 
 	public void restoreCar(int no) {
-		System.out.println("trying to restore");
 		if (!car[no].isAlive()) {//Only restart if it is not running
 			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
-			System.out.println("restoring");
 			car[no].start();
-			System.out.println("started");
+			barrier.editCarAmount(1); //Add one to car amount
 		}
 	}
 
