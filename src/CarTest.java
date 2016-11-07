@@ -38,7 +38,7 @@ public class CarTest extends Thread {
                 break;
                 
             case 2:
-            	//Same test as last case, except with high speeds.
+            	//Same test as case 0, except with high speeds.
 
             	cars.startAll();
 				for (int i = 1; i < 9; i++) {
@@ -65,13 +65,13 @@ public class CarTest extends Thread {
             
             case 5:
             	// Tests if turning the barrier on and off
-            	// doesn't cause problems.
-            	
+            	// with cars waiting at the barrier causes problems.
             	cars.barrierOn();
             	cars.startAll();
-            	sleep(1000);
             	cars.barrierOff();
-            	sleep(100);
+            	cars.barrierOn();
+            	sleep(5000);
+            	cars.barrierOff();
             	cars.barrierOn();
             	break;
             
