@@ -135,7 +135,6 @@ class Car extends Thread {
 			curpos = startpos;
 			cd.mark(curpos, col, no);
 			boolean hasBeenInterrupted = false; //Used to check if while loop should keep running 
-			
 			while (!hasBeenInterrupted) {
 				sleep(speed());
 
