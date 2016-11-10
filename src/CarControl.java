@@ -68,8 +68,9 @@ class Car extends Thread {
 	Semaphore[][] mutexPos; // Semaphores for creating mutual exclusion for each position
 	Alley alley;  //A monitor for ensuring mutual exclusion in the alley
 	Barrier barrier; //A monitor for creating barrier synchronizing
+	Semaphore[] removingSems; //Semaphores used for ensuring car removal 
 
-	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier) {
+	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier, Semaphore[] removingSems) {
 		this.alley = alley;
 		this.barrier = barrier;
 		this.no = no;
@@ -79,8 +80,10 @@ class Car extends Thread {
 		barpos = cd.getBarrierPos(no); // For later use
 
 		this.mutexPos = mutexPos;
+		this.removingSems = removingSems;
 		col = chooseColor(no);
 
+		
 		// do not change the special settings for car no. 0
 		if (no == 0) {
 			basespeed = 0;
@@ -165,6 +168,7 @@ class Car extends Thread {
 					cd.clear(curpos);
 					mutexPos[curpos.row][curpos.col].V();
 					hasBeenInterrupted = true;//This is used to prevent while loop to run
+					removingSems[no].V();
 					continue;//Break out of the loop
 				}
 				
@@ -206,6 +210,7 @@ class Car extends Thread {
 				cd.clear(curpos);
 				mutexPos[curpos.row][curpos.col].V();
 			}
+			removingSems[no].V();
 		} 
 	}
 }
@@ -307,6 +312,7 @@ public class CarControl implements CarControlI {
 	static volatile Alley alley;
 	static volatile Barrier barrier;
 	static volatile Semaphore[][] mutexPos;
+	static volatile Semaphore[] removingSems;
 
 	public CarControl(CarDisplayI cd) {
 		this.cd = cd;
@@ -317,16 +323,20 @@ public class CarControl implements CarControlI {
 		barrier = new Barrier(9);
 
 		mutexPos = new Semaphore[11][12];
+		removingSems = new Semaphore[9];
 		
 		for(int row = 0; row < 11; row++){
 			for(int col = 0; col < 12; col++){
 				mutexPos[row][col] = new Semaphore(1);
 			}
 		}
+		for( int no = 0; no < 9; no++) {
+			removingSems[no] = new Semaphore(0);
+		}
 		
 		for (int no = 0; no < 9; no++) {
 			gate[no] = new Gate();
-			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
+			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier, removingSems);
 			car[no].start();
 		}
 	}
@@ -362,13 +372,20 @@ public class CarControl implements CarControlI {
 		if (car[no].isAlive()) {
 			System.out.println("setting interrupted flag");
 			car[no].interrupt();
+			try {
+				removingSems[no].P();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 	}
 
 	public void restoreCar(int no) {
 		System.out.println("trying to restore");
-		if (!car[no].isAlive()) {//Only restart if it is not running
-			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
+		if (!car[no].isAlive() ) {//Only restart if it is not running
+			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier, removingSems);
 			System.out.println("restoring");
 			car[no].start();
 			System.out.println("started");
