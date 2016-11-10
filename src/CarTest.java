@@ -32,6 +32,7 @@ public class CarTest extends Thread {
             	cars.barrierOff();
             	cars.barrierOn();
             	cars.barrierOff();
+            	cars.barrierOn();
             case 19:
                 // Demonstration of speed setting.
                 // Change speed to double of default values
