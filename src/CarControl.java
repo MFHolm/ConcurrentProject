@@ -252,8 +252,6 @@ class Car extends Thread {
 }
 
 class Alley {
-	
-	
 	volatile Semaphore alleyMutexCW;
 	volatile Semaphore alleyMutexCCW;
 	volatile Semaphore mutexAlley;
@@ -306,11 +304,6 @@ class Barrier {
 		this.carAmount = carAmount;
 	}
 
-	@Override
-	public String toString() {
-		String s = "carsWaiting: " + carsWaiting + " turnstile1: " + turnstile1 + " turnstile2: " + turnstile2 + " mutex: "+ mutex;
-		return s;
-	}
 	// Wait for others (when barrier is active)
 	public void sync() throws InterruptedException { 
 		if(isBarrierOn){
