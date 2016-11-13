@@ -368,14 +368,12 @@ public class CarControl implements CarControlI {
 	}
 
 	public void removeCar(int no) {
-		System.out.println("trying to remove");
-		if (car[no].isAlive()) {
-			System.out.println("setting interrupted flag");
+		if (car[no].isAlive()) {//Only remove car, if car is running
 			car[no].interrupt();
 			try {
 				removingSems[no].P();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				System.err.println("Exception in remove car");
 				e.printStackTrace();
 			}
 			
@@ -383,12 +381,9 @@ public class CarControl implements CarControlI {
 	}
 
 	public void restoreCar(int no) {
-		System.out.println("trying to restore");
 		if (!car[no].isAlive() ) {//Only restart if it is not running
 			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier, removingSems);
-			System.out.println("restoring");
 			car[no].start();
-			System.out.println("started");
 		}
 	}
 
