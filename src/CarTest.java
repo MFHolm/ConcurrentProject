@@ -29,7 +29,8 @@ public class CarTest extends Thread {
                 break;
             
             case 1:
-            	//Run cars in one direction.
+            	//Run cars in one direction. All cars should just keep running and
+            	//never stop at the alley. This test shows that there is obligingness.
             	for (int i = 1; i < 5; i++) {
             		cars.startCar(i);
 				}
@@ -108,8 +109,21 @@ public class CarTest extends Thread {
             }
             	break;
             
-      
-            
+            case 8:
+            	//Turn barrier on and start all cars but one. 
+            	//Cars should not be able to cross the barrier.
+            	//This test demostrates that not only running cars
+            	//are being waited for.
+            	cars.barrierOn();
+            	cars.startCar(0);
+            	cars.startCar(1);
+            	cars.startCar(2);
+            	cars.startCar(3);
+            	cars.startCar(4);
+            	cars.startCar(5);
+            	cars.startCar(6);
+            	cars.startCar(7);
+            	break;
             case 19:
                 // Demonstration of speed setting.
                 // Change speed to double of default values
