@@ -143,7 +143,6 @@ class Car extends Thread {
 					mygate.pass();
 					speed = chooseSpeed();
 				}
-				System.out.println(barrier);
 				newpos = nextPos(curpos);
 				try {
 					// If the car is about to enter the critical section
