@@ -126,7 +126,36 @@ public class CarTest extends Thread {
             	cars.restoreCar(1);
             	break;
             	
+            case 10:
+            	//Test removing a car while barrier is on and letting all other cars run
+            	//Test illustrates that only present cars are being waited for
+            	cars.barrierOn();
+            	cars.removeCar(1);
+            	cars.startAll();
+            	break;
             	
+            case 11:
+            	//Test removing a car while barrier is on, then switching barrier off
+            	//and on again.
+            	//Test illustrates that only present cars are being waited for, and 
+            	//barrierOn() and barrrierOff() does not change this.
+            	cars.barrierOn();
+            	cars.removeCar(1);
+            	cars.startAll();
+            	cars.barrierOff();
+            	cars.barrierOn();
+            	break;
+            	
+            case 12:
+            	//Test removing a car while barrier is on, then waiting a while and restoring car
+            	//Test illustrates that only present cars are being waited for, and 
+            	//when a car is restored everything runs as normal
+            	cars.barrierOn();
+            	cars.startAll();
+            	cars.removeCar(1);
+            	sleep(1000);
+            	cars.restoreCar(1);
+            	break;
             case 19:
                 // Demonstration of speed setting.
                 // Change speed to double of default values
