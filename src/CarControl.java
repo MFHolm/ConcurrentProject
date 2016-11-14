@@ -3,10 +3,9 @@
 //Course 02158 Concurrent Programming, DTU, Fall 2016
 
 //Hans Henrik Lovengreen    Oct 3, 2016
+//Modified by Marita F. Holm s144445 and Mathias D. Thomsen s132317 Nov 14, 2016
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 class Gate {
 
@@ -68,8 +67,9 @@ class Car extends Thread {
 	Semaphore[][] mutexPos; // Semaphores for creating mutual exclusion for each position
 	Alley alley;  //A monitor for ensuring mutual exclusion in the alley
 	Barrier barrier; //A monitor for creating barrier synchronizing
+	Semaphore[] removingSems; //Semaphores used for ensuring car removal
 
-	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier) {
+	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier,Semaphore[] removingSems) {
 		this.alley = alley;
 		this.barrier = barrier;
 		this.no = no;
@@ -79,6 +79,7 @@ class Car extends Thread {
 		barpos = cd.getBarrierPos(no); // For later use
 
 		this.mutexPos = mutexPos;
+		this.removingSems = removingSems;
 		col = chooseColor(no);
 
 		// do not change the special settings for car no. 0
@@ -135,7 +136,6 @@ class Car extends Thread {
 			curpos = startpos;
 			cd.mark(curpos, col, no);
 			boolean hasBeenInterrupted = false; //Used to check if while loop should keep running 
-			
 			while (!hasBeenInterrupted) {
 				sleep(speed());
 
@@ -143,9 +143,10 @@ class Car extends Thread {
 					mygate.pass();
 					speed = chooseSpeed();
 				}
+				
 				newpos = nextPos(curpos);
 				try {
-					// If the car is about to enter the critical section
+					// If the car is about to enter the alley
 					if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
 						// CCW
 						alley.enter(no);
@@ -153,7 +154,7 @@ class Car extends Thread {
 						// CW
 						alley.enter(no);
 					}
-					//If car is at the position right before the barrier
+					//If at barrier location, synchronize
 					if (curpos.equals(barpos)) {
 						barrier.sync();
 					}
@@ -170,6 +171,7 @@ class Car extends Thread {
 					}
 					barrier.editCarAmount(-1);//Decrement car amount
 					hasBeenInterrupted = true;//This is used to prevent while loop to run
+					removingSems[no].V();//Indicates that removal is done
 					continue;//Break out of the loop
 				}
 				
@@ -186,7 +188,7 @@ class Car extends Thread {
 				
 				curpos = newpos;
 
-				// If the car has left the critical section
+				// If the car has left the alley
 				if (no < 5 && no != 0 && curpos.row == 9 && curpos.col == 1) {
 					alley.leave(no);
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
@@ -194,7 +196,6 @@ class Car extends Thread {
 				}
 			}
 		} catch(InterruptedException e) {
-			System.out.println("interrupted " + no);
 			if (curpos.row <= 9 && curpos.col == 0 || curpos.row == 1 && curpos.col <= 2) {
 				//If thread has been interrupted while car is in the alley
 				alley.leave(no);
@@ -212,6 +213,7 @@ class Car extends Thread {
 				mutexPos[curpos.row][curpos.col].V();
 			}
 			barrier.editCarAmount(-1);//Decrement car amount
+			removingSems[no].V();//Indicates that removal is done
 		} 
 	}
 }
@@ -221,6 +223,7 @@ class Alley {
 
 	int cwCounter, ccwCounter = 0;
 
+	//Increments the counter of the car type entering the alley
 	public synchronized void enter(int no) throws InterruptedException {
 		if (no < 5 && no != 0) {
 			while (cwCounter != 0) {
@@ -236,7 +239,8 @@ class Alley {
 			cwCounter++;
 		}
 	}
-
+	
+	//Decrements the counter of the car type entering the alley
 	public synchronized void leave(int no) {
 		if (no < 5 && no != 0) {
 			ccwCounter--;
@@ -284,10 +288,6 @@ class Barrier {
 		}
 	}
 	
-	public String toString() {
-		return "carsWaiting: "+ carsWaiting + " carAmount: "+ carAmount;
-	}
-	
 	//Edits car amount with the given amount
 	public synchronized void editCarAmount(int change) {
 		this.carAmount += change;
@@ -323,6 +323,7 @@ public class CarControl implements CarControlI {
 	static volatile Alley alley;
 	static volatile Barrier barrier;
 	static volatile Semaphore[][] mutexPos;
+	static volatile Semaphore[] removingSems;
 
 	public CarControl(CarDisplayI cd) {
 		this.cd = cd;
@@ -333,6 +334,7 @@ public class CarControl implements CarControlI {
 		barrier = new Barrier(9);
 
 		mutexPos = new Semaphore[11][12];
+		removingSems = new Semaphore[9];
 		
 		for(int row = 0; row < 11; row++){
 			for(int col = 0; col < 12; col++){
@@ -340,9 +342,12 @@ public class CarControl implements CarControlI {
 			}
 		}
 		
+		for( int no = 0; no < 9; no++) {
+			removingSems[no] = new Semaphore(0);
+		}
 		for (int no = 0; no < 9; no++) {
 			gate[no] = new Gate();
-			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
+			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier,removingSems);
 			car[no].start();
 		}
 	}
@@ -381,7 +386,7 @@ public class CarControl implements CarControlI {
 
 	public void restoreCar(int no) {
 		if (!car[no].isAlive()) {//Only restart if it is not running
-			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier);
+			car[no] = new Car(no, cd, gate[no], mutexPos, alley, barrier, removingSems);
 			car[no].start();
 			barrier.editCarAmount(1); //Add one to car amount
 		}
