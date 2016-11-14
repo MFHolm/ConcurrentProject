@@ -1,6 +1,4 @@
-import java.util.Calendar;
-
-//Prototype implementation of Car Test class
+//Implementation of Car Test class
 //Mandatory assignment
 //Course 02158 Concurrent Programming, DTU, Fall 2016
 
@@ -79,14 +77,14 @@ public class CarTest extends Thread {
             	// Test that turns the barrier on and off
             	// for thirty seconds.
             	cars.startAll();
-            	long start = Calendar.getInstance().getTimeInMillis();
+            	long start = System.currentTimeMillis();
             	long now;
             	do {
             		cars.barrierOn();
             		sleep(250);
             		cars.barrierOff();
             		sleep(250);
-            		now = Calendar.getInstance().getTimeInMillis();
+            		now = System.currentTimeMillis();
             	} while(start+30000 > now);
             	break;
             }	
@@ -96,14 +94,14 @@ public class CarTest extends Thread {
 					cars.setSpeed(i, 1);
 				};
             	cars.startAll();
-            	long start = Calendar.getInstance().getTimeInMillis();
+            	long start = System.currentTimeMillis();
             	long now;
             	do {
             		cars.barrierOn();
             		sleep(250);
             		cars.barrierOff();
             		sleep(250);
-            		now = Calendar.getInstance().getTimeInMillis();
+            		now = System.currentTimeMillis();
             	} while(start+30000 > now);
             	break;
             }
