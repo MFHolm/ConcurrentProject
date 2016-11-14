@@ -1,6 +1,4 @@
-import java.util.Calendar;
-
-//Prototype implementation of Car Test class
+//Implementation of Car Test class
 //Mandatory assignment
 //Course 02158 Concurrent Programming, DTU, Fall 2016
 
@@ -25,11 +23,19 @@ public class CarTest extends Thread {
             	// Also checks if the alley works as intended when 
             	// the cars run with regular speed.
             	cars.startAll();
-
                 break;
             
             case 1:
-            	//Run cars in one direction.
+            	//Same test as case 0, except with high speeds.
+            	for (int i = 1; i < 9; i++) {
+            		cars.setSpeed(i, 1);
+            	}
+            	cars.startAll();
+            	break;
+            	
+            case 2:
+            	//Run cars in one direction. All cars should just keep running and 
+            	//never stop at the alley. This test shows obligingness.
             	for (int i = 1; i < 5; i++) {
             		cars.startCar(i);
 				}
@@ -37,35 +43,32 @@ public class CarTest extends Thread {
                 cars.stopAll();
                 break;
                 
-            case 2:
-            	//Same test as case 0, except with high speeds.
-
-            	cars.startAll();
-				for (int i = 1; i < 9; i++) {
-					cars.setSpeed(i, 1);
-				}
-            	
-            	break;
-            	
             case 3:
-            	//Testing barrier with regular speeds.
-            	cars.barrierOn();
+            	//Testing the alley with slowdown enabled.
+            	//Cars should experience starvation to an extend.
+            	cars.setSlow(true);
             	cars.startAll();
             	break;
-            	
             	
             case 4:
-            	//Testing barrier with extreme speeds.
+            	//Testing barrier with regular speeds. The cars should synchronize at the barrier.
             	cars.barrierOn();
             	cars.startAll();
+            	break;
+            	
+            case 5:
+            	//Same as previous case, except with high speeds.
+            	cars.barrierOn();
             	for (int i = 1; i < 9; i++) {
-					cars.setSpeed(i, 1);
-				}
+            		cars.setSpeed(i, 1);
+            	}
+            	cars.startAll();
             	break;
             
-            case 5:
-            	// Tests if turning the barrier on and off
-            	// with cars waiting at the barrier causes problems.
+            case 6:
+            	//Test if synchronization still works if the barrier
+            	//is turned on and off in rapid succession. Cars should
+            	//syncrhonize as normal.
             	cars.barrierOn();
             	cars.startAll();
             	cars.barrierOff();
@@ -75,40 +78,59 @@ public class CarTest extends Thread {
             	cars.barrierOn();
             	break;
             
-            case 6: {
+            case 7: {
             	// Test that turns the barrier on and off
-            	// for thirty seconds.
+            	// for thirty seconds. Cars should
+            	// synchronize as normal.
+            	cars.barrierOn();
             	cars.startAll();
-            	long start = Calendar.getInstance().getTimeInMillis();
+            	long start = System.currentTimeMillis();
             	long now;
             	do {
-            		cars.barrierOn();
-            		sleep(250);
             		cars.barrierOff();
             		sleep(250);
-            		now = Calendar.getInstance().getTimeInMillis();
+            		cars.barrierOn();
+            		sleep(250);
+            		now = System.currentTimeMillis();
             	} while(start+30000 > now);
             	break;
             }	
-            case 7: {
+            case 8: {
             	//Same as previous case, except the speed is extreme.
             	for (int i = 1; i < 9; i++) {
 					cars.setSpeed(i, 1);
 				};
+				cars.barrierOn();
             	cars.startAll();
-            	long start = Calendar.getInstance().getTimeInMillis();
+            	long start = System.currentTimeMillis();
             	long now;
             	do {
-            		cars.barrierOn();
-            		sleep(250);
             		cars.barrierOff();
             		sleep(250);
-            		now = Calendar.getInstance().getTimeInMillis();
+            		cars.barrierOn();
+            		sleep(250);
+            		now = System.currentTimeMillis();
             	} while(start+30000 > now);
             	break;
             }
-            case 8:
-            	//Test removing and restoring a car while running
+            case 9:
+            	//Turn barrier on and start all cars but one. 
+            	//Cars should not be able to cross the barrier.
+            	//This test demonstrates that not only running cars
+            	//are being waited for.
+            	cars.barrierOn();
+            	cars.startCar(0);
+            	cars.startCar(1);
+            	cars.startCar(2);
+            	cars.startCar(3);
+            	cars.startCar(4);
+            	cars.startCar(5);
+            	cars.startCar(6);
+            	cars.startCar(7);
+            	break;
+            case 10:
+            	//Test removing and restoring a car while running. Car should 
+            	//be removed and then restored and run as normal.
             	cars.startAll();
             	sleep(500);
             	cars.removeCar(1);
@@ -116,8 +138,9 @@ public class CarTest extends Thread {
             	cars.restoreCar(1);
             	break;
             
-            case 9:
-            	//Test removing and restoring really fast a car while running
+            case 11:
+            	//Test removing and restoring cars in rapid succession. 
+            	//Car should be restored and run as normal.
             	cars.startAll();
             	sleep(500);
             	cars.removeCar(1);
@@ -126,16 +149,17 @@ public class CarTest extends Thread {
             	cars.restoreCar(1);
             	break;
             	
+            case 12:
+            	//Same as previous case, except the speed is extreme.
+            	cars.setSpeed(1, 1);
+            	cars.startAll();
+            	sleep(500);
+            	cars.removeCar(1);
+            	cars.restoreCar(1);
+            	cars.removeCar(1);
+            	cars.restoreCar(1);
+            	break;
             	
-            case 19:
-                // Demonstration of speed setting.
-                // Change speed to double of default values
-                cars.println("Doubling speeds");
-                for (int i = 1; i < 9; i++) {
-                    cars.setSpeed(i,50);
-                };
-                break;
-
             default:
                 cars.println("Test " + testno + " not available");
             }

@@ -1,12 +1,10 @@
-//Prototype implementation of Car Control
+//Implementation of Car Control
 //Mandatory assignment
 //Course 02158 Concurrent Programming, DTU, Fall 2016
 
 //Hans Henrik Lovengreen    Oct 3, 2016
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 class Gate {
 
@@ -148,7 +146,7 @@ class Car extends Thread {
 
 				newpos = nextPos(curpos);
 				try {
-					// If the car is about to enter the critical section
+					// If the car is about to enter the alley
 					if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
 						// CCW
 						alley.enter(no);
@@ -156,19 +154,19 @@ class Car extends Thread {
 						// CW
 						alley.enter(no);
 					}
-					//If car is at the position right before the barrier
+					//If at barrier location, synchronize
 					if (curpos.equals(barpos)) {
 						barrier.sync();
 					}
 					//Claim the next position by calling P() on its semaphore. This is done after the checking for 
-					//alley entry otherwise you could be waiting at the alley while having claimed the next position.
+					//alley entry otherwise you could be waiting at the alley while having claimed the next position
 					mutexPos[newpos.row][newpos.col].P();
 				} catch (InterruptedException e) {
 					//If thread has been interrupted while car is waiting. 
 					cd.clear(curpos);
 					mutexPos[curpos.row][curpos.col].V();
 					hasBeenInterrupted = true;//This is used to prevent while loop to run
-					removingSems[no].V();
+					removingSems[no].V();//Indicates that removal is done
 					continue;//Break out of the loop
 				}
 				
@@ -185,7 +183,7 @@ class Car extends Thread {
 				
 				curpos = newpos;
 
-				// If the car has left the critical section
+				// If the car has left the alley
 				if (no < 5 && no != 0 && curpos.row == 9 && curpos.col == 1) {
 					alley.leave(no);
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
@@ -210,7 +208,7 @@ class Car extends Thread {
 				cd.clear(curpos);
 				mutexPos[curpos.row][curpos.col].V();
 			}
-			removingSems[no].V();
+			removingSems[no].V();//Indicates that removal is done
 		} 
 	}
 }
@@ -220,6 +218,7 @@ class Alley {
 
 	int cwCounter, ccwCounter = 0;
 
+	//Increments the counter of the car type entering the alley
 	public synchronized void enter(int no) throws InterruptedException {
 		if (no < 5 && no != 0) {
 			while (cwCounter != 0) {
@@ -236,6 +235,7 @@ class Alley {
 		}
 	}
 
+	//Decrements the counter of the car type entering the alley
 	public synchronized void leave(int no) {
 		if (no < 5 && no != 0) {
 			ccwCounter--;
@@ -281,10 +281,6 @@ class Barrier {
 				notifyAll();
 			}
 		}
-	}
-	
-	public String toString() {
-		return "carsWaiting: "+ carsWaiting + " carAmount: "+ carAmount;
 	}
 
 	public synchronized void on() { // Activate barrier
@@ -369,14 +365,13 @@ public class CarControl implements CarControlI {
 
 	public void removeCar(int no) {
 		if (car[no].isAlive()) {//Only remove car, if car is running
-			car[no].interrupt();
+			car[no].interrupt();//Interrupt thread
 			try {
-				removingSems[no].P();
+				removingSems[no].P(); //Wait until car has been removed
 			} catch (InterruptedException e) {
 				System.err.println("Exception in remove car");
 				e.printStackTrace();
 			}
-			
 		}
 	}
 
