@@ -27,10 +27,10 @@ public class CarTest extends Thread {
             
             case 1:
             	//Same test as previous case, except with high speeds.
+            	for (int i = 1; i < 9; i++) {
+            		cars.setSpeed(i, 1);
+            	}
             	cars.startAll();
-				for (int i = 1; i < 9; i++) {
-					cars.setSpeed(i, 1);
-				}
             	break; 
             	
             case 2:
@@ -59,11 +59,11 @@ public class CarTest extends Thread {
             	
             case 5:
             	//Same as previous case, except with high speeds.
+            	for (int i = 1; i < 9; i++) {
+            		cars.setSpeed(i, 1);
+            	}
             	cars.barrierOn();
             	cars.startAll();
-            	for (int i = 1; i < 9; i++) {
-					cars.setSpeed(i, 1);
-				}
             	break;
             
             case 6:
@@ -83,14 +83,15 @@ public class CarTest extends Thread {
             	// Test that turns the barrier on and off
             	// for thirty seconds. Cars should 
             	// synchronize as normal.
+            	cars.barrierOn();
             	cars.startAll();
             	long start = System.currentTimeMillis();
             	long now;
             
             	do {
-            		cars.barrierOn();
-            		sleep(250);
             		cars.barrierOff();
+            		sleep(250);
+            		cars.barrierOn();
             		sleep(250);
             		now = System.currentTimeMillis();
             	} while(start+30000 > now);
@@ -101,13 +102,14 @@ public class CarTest extends Thread {
             	for (int i = 1; i < 9; i++) {
 					cars.setSpeed(i, 1);
 				};
+				cars.barrierOn();
             	cars.startAll();
             	long start = System.currentTimeMillis();
             	long now;
             	do {
-            		cars.barrierOn();
-            		sleep(250);
             		cars.barrierOff();
+            		sleep(250);
+            		cars.barrierOn();
             		sleep(250);
             		now = System.currentTimeMillis();
             	} while(start+30000 > now);
