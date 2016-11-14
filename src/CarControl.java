@@ -1,12 +1,11 @@
-//Prototype implementation of Car Control
+//Implementation of Car Control
 //Mandatory assignment
 //Course 02158 Concurrent Programming, DTU, Fall 2016
 
 //Hans Henrik Lovengreen    Oct 3, 2016
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
+
 
 class Gate {
 
@@ -67,7 +66,7 @@ class Car extends Thread {
 
 	Semaphore[][] mutexPos; // Keeps track of positions of other cars.
 	Alley alley; // Contains semaphores and other information for the alley.
-	Barrier barrier;
+	Barrier barrier; //Contains semaphores and other information for barrier synchronization.
 
 	public Car(int no, CarDisplayI cd, Gate g, Semaphore[][] mutexPos, Alley alley, Barrier barrier) {
 		this.alley = alley;
@@ -149,14 +148,12 @@ class Car extends Thread {
 
 				newpos = nextPos(curpos);
 				
-				
-				// If the car is about to enter the critical section
-
+				// If the car is about to enter the alley
 				if (no < 5 && no != 0 && (curpos.row == 2 && curpos.col == 1 || curpos.row == 1 && curpos.col == 3)) {
 					// CCW
 					//Claim access to alley for CCW.
 					alley.alleyMutexCCW.P();
-					//If first car going CCW then attempt to claim access to alley.
+					//If it is the first car going CCW then attempt to claim access to alley.
 					if (alley.ccwCounter == 0) {
 						alley.mutexAlley.P();
 					}
@@ -165,7 +162,7 @@ class Car extends Thread {
 					
 				} else if (no > 4 && curpos.row == 10 && curpos.col == 0) {
 					// CW
-					//Symmetrical to the access for CCW.
+					//Symmetrical to the access for CCW
 					alley.alleyMutexCW.P();
 		
 					if (alley.cwCounter == 0) {
@@ -176,8 +173,8 @@ class Car extends Thread {
 
 				
 				}
+				//If at barrier location, synchronize
 				if (curpos.equals(barpos)) {
-					//If at barrier location, wait for the remaining cars (given that the barrier is on).
 					barrier.sync();
 				}
 				
@@ -194,23 +191,23 @@ class Car extends Thread {
 				
 				cd.clear(curpos, newpos);
 				cd.mark(newpos, col, no);				
-				//Right when moving, release the semaphore of the previous position.
+				//Release the semaphore of the previous position.
 				mutexPos[curpos.row][curpos.col].V();
 				
 				curpos = newpos;
 
-				// If the car has left the critical section
+				// If the car has left the alley
 				if (no < 5 && no != 0 && curpos.row == 9 && curpos.col == 1) {
-					//Claim access to alley for CCW cars.
+					//Claim access to alley counter for CCW cars
 					alley.alleyMutexCCW.P();
 					alley.leave(no);
-					//If the car is the last to leave alley, then release the lock of the alley.
+					//If the car is the last to leave alley, then release the lock of the alley
 					if (alley.ccwCounter == 0) {
 						alley.mutexAlley.V();
 					}
 					alley.alleyMutexCCW.V();
 				} else if (no > 4 && curpos.row == 0 && curpos.col == 2) {
-					//Symmetrical to the solution for CCW.
+					//Symmetrical to the solution for CCW
 					alley.alleyMutexCW.P();
 					alley.leave(no);
 					if (alley.cwCounter == 0) {
@@ -227,27 +224,6 @@ class Car extends Thread {
 			e.printStackTrace();
 		}
 	}
-
-	/*private boolean checkNextPos() {
-		boolean occupied = false;
-		for (int i = 0; i < 9; i++) {
-			if (positions[i][0].equals(newpos) || positions[i][1].equals(newpos)) {
-				occupied = true;
-				break;
-			}
-		}
-		if (!occupied) {
-			// Update positions array
-			positions[no][0] = curpos;
-			positions[no][1] = newpos;
-			return true;
-		} else {
-			// If tile is occupied just continue in the while loop
-			mutexPositions.V();
-			return false;
-		}
-	}*/
-
 }
 
 class Alley {
@@ -263,7 +239,8 @@ class Alley {
 		mutexAlley = new Semaphore(1);
 
 	}
-
+	
+	//Increments the counter of the car type entering the alley
 	public void enter(int no) {
 		if (no < 5 && no != 0) {
 			ccwCounter++;
@@ -271,7 +248,8 @@ class Alley {
 			cwCounter++;
 		}
 	}
-
+	
+	//Decrements the counter of the car type entering the alley
 	public void leave(int no) {
 		if (no < 5 && no != 0) {
 			ccwCounter--;
@@ -279,13 +257,6 @@ class Alley {
 			cwCounter--;
 		}
 	}
-
-	@Override
-	public String toString() {
-		return "alleyMutexCW: " + this.alleyMutexCW + " alleyMutexCCW: " + this.alleyMutexCCW + " mutexAlley: "
-				+ this.mutexAlley + " cwCounter: " + this.cwCounter + " ccwCounter: " + this.ccwCounter;
-	}
-
 }
 
 class Barrier {
@@ -309,24 +280,31 @@ class Barrier {
 			mutex.P();
 			carsWaiting++;
 			if(carsWaiting == carAmount){
+				//If the car arriving is the last car, then it must 
+				//let one car through the first turnstile
 				turnstile2.P();
 				turnstile1.V();
 			}
 			mutex.V();
 			
 			turnstile1.P();
+			//Let the next car pass too
 			turnstile1.V();
 			
-			//barrier
+			//Barrier
+			
 			mutex.P();
 			carsWaiting--;
 			if(carsWaiting == 0){
+				//If this is the last car to cross the barrier
+				//close the first turnstile and let one through the second
 				turnstile1.P();
 				turnstile2.V();
 			}
 			mutex.V();
 			
 			turnstile2.P();
+			//Let the next car pass too
 			turnstile2.V();
 		}
 	
@@ -336,6 +314,7 @@ class Barrier {
 		isBarrierOn = true;
 	}
 
+	
 	public void off() { // Deactivate barrier
 		if (isBarrierOn) {
 			isBarrierOn = false;
