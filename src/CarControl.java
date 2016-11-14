@@ -191,7 +191,6 @@ class Car extends Thread {
 				}
 			}
 		} catch(InterruptedException e) {
-			System.out.println("interrupted " + no);
 			if (curpos.row <= 9 && curpos.col == 0 || curpos.row == 1 && curpos.col <= 2) {
 				//If thread has been interrupted while car is in the alley
 				alley.leave(no);
